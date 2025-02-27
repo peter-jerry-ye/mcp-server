@@ -1,0 +1,12 @@
+{
+    "name": "moonbit-community/cli",
+    "source": "src",
+    "deps": {
+        "peter-jerry-ye/wasi-imports": "0.1.0",
+        "peter-jerry-ye/async": "0.1.0",
+        "peter-jerry-ye/io": "0.1.0",
+        "peter-jerry-ye/mcp-server": {
+            "path": ".."
+        }
+    }
+}

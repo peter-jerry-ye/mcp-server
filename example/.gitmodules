@@ -1,0 +1,12 @@
+[submodule "lib/async"]
+	path = lib/async
+	url = http://192.168.86.1/yezihang/async.git
+[submodule "lib/wasi-imports"]
+	path = lib/wasi-imports
+	url = http://192.168.86.1/yezihang/wasi-imports.git
+[submodule "lib/io"]
+	path = lib/io
+	url = http://192.168.86.1/yezihang/io.git
+[submodule "lib/mcp-server"]
+	path = lib/mcp-server
+	url = http://192.168.86.1/yezihang/mcp-server.git

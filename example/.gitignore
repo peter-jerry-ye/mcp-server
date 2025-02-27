@@ -1,0 +1,8 @@
+target/
+.mooncakes/
+
+# MAC
+.DS_Store
+
+# JS/TS
+node_modules

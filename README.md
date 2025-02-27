@@ -11,6 +11,5 @@ The user can use this to develop a running MCP server, providing more functional
 
 ## TODO
 
-- Add client example
 - Add documentation
 - Support more features
