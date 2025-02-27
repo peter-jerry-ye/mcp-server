@@ -1,0 +1,12 @@
+{
+  "name": "peter-jerry-ye/mcp-server",
+  "source": "src",
+  "version": "0.1.0",
+  "deps": {
+    "peter-jerry-ye/wasi-imports": "0.1.0",
+    "peter-jerry-ye/async": "0.1.0",
+    "peter-jerry-ye/io": "0.1.0"
+  },
+  "license": "Apache 2.0",
+  "repository": "https://github.com/peter-jerry-ye/mcp-server"
+}

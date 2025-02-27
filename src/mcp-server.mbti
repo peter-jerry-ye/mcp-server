@@ -1,0 +1,66 @@
+package peter-jerry-ye/mcp-server
+
+// Values
+fn array(Schema) -> Schema
+
+fn enums(Array[Json]) -> Schema
+
+fn integer() -> Schema
+
+fn new() -> Server
+
+fn object(Map[String, Schema], additionalProperties~ : Bool = .., required? : Array[String]) -> Schema
+
+fn string() -> Schema
+
+// Types and methods
+pub(all) enum LogLevel {
+  Debug
+  Info
+  Notice
+  Warning
+  Error
+  Critical
+  Alert
+  Emergency
+}
+impl Eq for LogLevel
+impl Show for LogLevel
+
+pub(all) struct Response {
+  isError : Bool
+  payload : ResponsePayload
+}
+
+pub(all) enum ResponsePayload {
+  Text(String)
+  Image(String, String)
+  Resource(String, String, String)
+}
+
+pub struct Root {
+  uri : String
+  name : String?
+}
+impl Eq for Root
+impl Show for Root
+
+type Schema
+impl Schema {
+  to_json(Self) -> Json
+  verify(Self, Json) -> Bool
+}
+
+type Server
+impl Server {
+  add_tool(Self, name~ : String, description~ : String, inputSchema~ : Schema, cb~ : (Json, Self) -> Response!) -> Unit
+  list_roots(Self) -> Array[Root]!
+  log(Self, Json, level~ : LogLevel = ..) -> Unit!
+  remove_tool(Self, String) -> Unit
+  serve(Self) -> Result[Unit, Unit]
+}
+
+// Type aliases
+
+// Traits
+
