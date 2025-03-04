@@ -26,7 +26,7 @@ pub fn run() -> Result[Unit, Unit] {
     ,
     inputSchema=@mcp.object({ "location": @mcp.string() }, required=["location"]),
     cb=async fn(args, server) {
-      guard let { "location": String(city), .. } = args
+      guard args is { "location": String(city), .. }
       let weather = @http.fetch(
         @http.request!(
           "wttr.in",
