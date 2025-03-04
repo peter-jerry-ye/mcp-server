@@ -88,6 +88,11 @@ pub fn Schema::to_json(self : Schema) -> Json {
 }
 
 ///|
+pub impl ToJson for Schema with to_json(self) {
+  self.to_json()
+}
+
+///|
 pub fn Schema::verify(self : Schema, json : Json) -> Bool {
   match (self, json) {
     (Schema::Integer, Number(n)) => n == n && n.to_int().to_double() == n

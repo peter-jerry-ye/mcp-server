@@ -72,21 +72,22 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
   // handle messages
   @promise.spawn(async fn(defer) {
     defer(fn() { self.running = false })
-    guard let Request(
-      id~,
-      method_="initialize",
-      params={
-        "protocolVersion": "2024-11-05",
-        "capabilities": capabilities,
-        "clientInfo": clientInfo,
-        ..
-      }
-    ) = self.in_channel.pop!!() else {
-      message =>
-        @io.println(
-          "Invalid initialization request \{message}",
-          stream=@io.stderr,
-        ).await!!()
+    let request = self.in_channel.pop!!()
+    guard request
+      is Request(
+        id~,
+        method_="initialize",
+        params={
+          "protocolVersion": "2024-11-05",
+          "capabilities": capabilities,
+          "clientInfo": clientInfo,
+          ..
+        }
+      ) else {
+      @io.println(
+        "Invalid initialization request \{request}",
+        stream=@io.stderr,
+      ).await!!()
     }
     if id is Number(id) {
       self.used_id = @math.maximum(self.used_id, id.to_uint())
@@ -100,12 +101,13 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
       }),
     )
     self.out_channel.push!!(response)
-    guard let Notification(method_="notifications/initialized", params=_) = self.in_channel.pop!!() else {
-      message =>
-        @io.println(
-          "Invalid initializaiton notification \{message}",
-          stream=@io.stderr,
-        ).await!!()
+    let notification = self.in_channel.pop!!()
+    guard notification
+      is Notification(method_="notifications/initialized", params=_) else {
+      @io.println(
+        "Invalid initializaiton notification \{notification}",
+        stream=@io.stderr,
+      ).await!!()
     }
     self.capabilities = capabilities
     self.clientInfo = clientInfo
@@ -304,23 +306,19 @@ pub async fn list_roots(self : Server) -> Array[Root]! {
     let response = channel.pop!!()
     self.callbacks.remove(id)
     // TODO: better error handling
-    guard let Response(payload~, ..) = response else {
-      message => {
-        @io.println(
-          "Unexpected message for request roots/list: \{message}",
-          stream=@io.stderr,
-        ).await!!()
-        return []
-      }
+    guard response is Response(payload~, ..) else {
+      @io.println(
+        "Unexpected message for request roots/list: \{response}",
+        stream=@io.stderr,
+      ).await!!()
+      return []
     }
-    guard let Ok({ "roots": Array(roots), .. }) = payload else {
-      _ => {
-        @io.println(
-          "Unexpected payload for request roots/list",
-          stream=@io.stderr,
-        ).await!!()
-        return []
-      }
+    guard payload is Ok({ "roots": Array(roots), .. }) else {
+      @io.println(
+        "Unexpected payload for request roots/list",
+        stream=@io.stderr,
+      ).await!!()
+      return []
     }
     roots.map(fn {
       { "uri": String(uri), "name"? : name, .. } =>
