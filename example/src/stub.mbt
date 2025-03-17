@@ -27,12 +27,12 @@ pub fn run() -> Result[Unit, Unit] {
     inputSchema=@mcp.object({ "location": @mcp.string() }, required=["location"]),
     cb=async fn(args, server) {
       guard args is { "location": String(city), .. }
-      let weather = @http.fetch(
+      let weather = @http.fetch!!(
         @http.request!(
           "wttr.in",
           path="/" + city.replace_all(old=" ", new="%20") + "?format=4",
         ),
-      ).await!!()
+      )
       server.log!!("Got weather response")
       server.log!!("Roots: \{server.list_roots!!()}")
       @mcp.Response::{

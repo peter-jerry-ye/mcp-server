@@ -47,14 +47,12 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
   @promise.spawn(async fn(_defer) {
     while self.running {
       try {
-        let message = @io.read_line().await!!()
-          |> @json.parse!()
-          |> @json.from_json!()
+        let message = @io.read_line!!() |> @json.parse!() |> @json.from_json!()
         self.in_channel.push!!(message)
       } catch {
         @streams.Closed => break
         e => {
-          @io.println(e.to_string(), stream=@io.stderr).await!!()
+          @io.println!!(e.to_string(), stream=@io.stderr)
           break
         }
       }
@@ -65,7 +63,7 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
   @promise.spawn(async fn(_defer) {
     while true {
       let message = self.out_channel.pop!!()
-      @io.println(message.to_json() |> @json.stringify).await!!()
+      @io.println!!(message.to_json() |> @json.stringify)
     }
   })
   |> ignore
@@ -84,10 +82,10 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
           ..
         }
       ) else {
-      @io.println(
+      @io.println!!(
         "Invalid initialization request \{request}",
         stream=@io.stderr,
-      ).await!!()
+      )
     }
     if id is Number(id) {
       self.used_id = @math.maximum(self.used_id, id.to_uint())
@@ -104,10 +102,10 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
     let notification = self.in_channel.pop!!()
     guard notification
       is Notification(method_="notifications/initialized", params=_) else {
-      @io.println(
+      @io.println!!(
         "Invalid initializaiton notification \{notification}",
         stream=@io.stderr,
-      ).await!!()
+      )
     }
     self.capabilities = capabilities
     self.clientInfo = clientInfo
@@ -117,7 +115,7 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
         try {
           self.handle!!(message)
         } catch {
-          error => @io.println(error.to_string(), stream=@io.stderr).await!!()
+          error => @io.println!!(error.to_string(), stream=@io.stderr)
         } else {
           Some(response) => self.out_channel.push!!(response)
           None => ()
@@ -230,15 +228,15 @@ async fn handle(self : Server, message : Message) -> Message?! {
       if self.callbacks[id] is Some(channel) {
         @promise.spawn(fn(_dfer) { channel.push!!(response) }) |> ignore
       } else {
-        @io.println(
+        @io.println!!(
           "Unexpected response for request \{id}: \{response}",
           stream=@io.stderr,
-        ).await!!()
+        )
       }
       None
     }
     other => {
-      @io.println("Unhandled \{other}", stream=@io.stderr) |> ignore
+      @io.println!!("Unhandled \{other}", stream=@io.stderr)
       None
     }
   }
@@ -307,17 +305,17 @@ pub async fn list_roots(self : Server) -> Array[Root]! {
     self.callbacks.remove(id)
     // TODO: better error handling
     guard response is Response(payload~, ..) else {
-      @io.println(
+      @io.println!!(
         "Unexpected message for request roots/list: \{response}",
         stream=@io.stderr,
-      ).await!!()
+      )
       return []
     }
     guard payload is Ok({ "roots": Array(roots), .. }) else {
-      @io.println(
+      @io.println!!(
         "Unexpected payload for request roots/list",
         stream=@io.stderr,
-      ).await!!()
+      )
       return []
     }
     roots.map(fn {
