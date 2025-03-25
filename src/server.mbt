@@ -254,7 +254,7 @@ pub async fn log(
   self : Server,
   message : Json,
   level~ : LogLevel = Info
-) -> Unit! {
+) -> Unit {
   let notification = Notification(method_="notifications/message", params={
     "level": String(level.to_string().to_lower()),
     "data": message,
