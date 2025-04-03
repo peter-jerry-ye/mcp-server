@@ -13,61 +13,61 @@
 // limitations under the License.
 
 ///|
-enum Schema {
+enum T {
   Integer
   String
   Object(
-    Map[String, Schema],
+    Map[String, T],
     required~ : Array[String]?,
     additionalProperties~ : Bool
   )
-  Array(Schema)
+  Array(T)
   Enum(Array[Json])
 }
 
 ///|
-pub fn integer() -> Schema {
-  Schema::Integer
+pub fn integer() -> T {
+  T::Integer
 }
 
 ///|
-pub fn string() -> Schema {
-  Schema::String
+pub fn string() -> T {
+  T::String
 }
 
 ///|
 pub fn object(
-  object : Map[String, Schema],
+  object : Map[String, T],
   additionalProperties~ : Bool = true,
   required? : Array[String]
-) -> Schema {
-  Schema::Object(object, required~, additionalProperties~)
+) -> T {
+  T::Object(object, required~, additionalProperties~)
 }
 
 ///|
-pub fn enums(values : Array[Json]) -> Schema {
-  Schema::Enum(values)
+pub fn enums(values : Array[Json]) -> T {
+  T::Enum(values)
 }
 
 ///|
-pub fn array(schema : Schema) -> Schema {
-  Schema::Array(schema)
+pub fn array(schema : T) -> T {
+  T::Array(schema)
 }
 
 ///|
-pub fn Schema::to_json(self : Schema) -> Json {
+pub fn T::to_json(self : T) -> Json {
   match self {
-    Schema::Integer => { "type": "integer" }
-    Schema::String => { "type": "string" }
-    Schema::Enum(values) => { "enum": Array(values) }
-    Schema::Array(schema) => {
+    T::Integer => { "type": "integer" }
+    T::String => { "type": "string" }
+    T::Enum(values) => { "enum": Array(values) }
+    T::Array(schema) => {
       let result : Map[String, Json] = {
         "type": "array",
         "items": schema.to_json(),
       }
       Object(result)
     }
-    Schema::Object(map, required~, additionalProperties~) => {
+    T::Object(map, required~, additionalProperties~) => {
       let json_object = Map::new()
       for key, value in map {
         json_object[key] = value.to_json()
@@ -88,19 +88,19 @@ pub fn Schema::to_json(self : Schema) -> Json {
 }
 
 ///|
-pub impl ToJson for Schema with to_json(self) {
+pub impl ToJson for T with to_json(self) {
   self.to_json()
 }
 
 ///|
-pub fn Schema::verify(self : Schema, json : Json) -> Bool {
+pub fn T::verify(self : T, json : Json) -> Bool {
   match (self, json) {
-    (Schema::Integer, Number(n)) => n == n && n.to_int().to_double() == n
-    (Schema::String, String(_)) => true
-    (Schema::Enum(values), _) => values.contains(json)
-    (Schema::Array(schema), Array(values)) =>
+    (T::Integer, Number(n)) => n == n && n.to_int().to_double() == n
+    (T::String, String(_)) => true
+    (T::Enum(values), _) => values.contains(json)
+    (T::Array(schema), Array(values)) =>
       values.iter().all(fn { value => schema.verify(value) })
-    (Schema::Object(map, required~, additionalProperties~), Object(json)) => {
+    (T::Object(map, required~, additionalProperties~), Object(json)) => {
       let required = @sorted_set.from_array(required.or([]))
       for key, value in map {
         if json[key] is Some(json) {

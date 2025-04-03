@@ -24,7 +24,9 @@ pub fn run() -> Result[Unit, Unit] {
       #|Get current weather information for a city from wttr.in.
       #|The city name (in English) is passed as an argument.
     ,
-    inputSchema=@mcp.object({ "location": @mcp.string() }, required=["location"]),
+    inputSchema=@schema.object({ "location": @schema.string() }, required=[
+      "location",
+    ]),
     cb=async fn(args, server) {
       guard args is { "location": String(city), .. }
       let weather = @http.fetch!!(

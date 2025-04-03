@@ -20,6 +20,10 @@
     {
       "path": "peter-jerry-ye/mcp-server",
       "alias": "mcp"
+    },
+    {
+      "path": "peter-jerry-ye/mcp-server/schema",
+      "alias": "schema"
     }
   ]
 }

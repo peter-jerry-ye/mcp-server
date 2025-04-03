@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+typealias Schema = @schema.T
+
 ///|
 /// RFC 5424
 pub(all) enum LogLevel {
