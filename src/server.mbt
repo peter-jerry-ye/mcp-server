@@ -15,6 +15,7 @@
 ///|
 struct Server {
   tools : Map[String, Tool]
+  prompts : Map[String, Prompt]
   in_channel : @channel.T[Message]
   out_channel : @channel.T[Message]
   mut running : Bool
@@ -30,6 +31,7 @@ struct Server {
 pub fn new() -> Server {
   Server::{
     tools: {},
+    prompts: {},
     in_channel: @channel.make(size=10),
     out_channel: @channel.make(size=10),
     running: false,
@@ -191,26 +193,24 @@ async fn handle(self : Server, message : Message) -> Message?! {
               } else {
                 False
               },
-              "content": match payload {
-                Text(text~) => [{ "type": "text", "text": String(text) }]
-                Image(data~, mimeType~) =>
-                  [
+              "content": Array(
+                payload.map(fn {
+                  Text(text~) => { "type": "text", "text": String(text) }
+                  Image(data~, mimeType~) =>
                     {
                       "type": "image",
                       "data": String(data),
                       "mimeType": String(mimeType),
-                    },
-                  ]
-                Resource(uri~, mimeType~, text~) =>
-                  [
+                    }
+                  Resource(uri~, mimeType~, text~) =>
                     {
                       "type": "resource",
                       "uri": String(uri),
                       "mimeType": String(mimeType),
                       "text": String(text),
-                    },
-                  ]
-              },
+                    }
+                }),
+              ),
             }),
           ),
         )
@@ -227,7 +227,115 @@ async fn handle(self : Server, message : Message) -> Message?! {
         )
       }
     Request(method_="prompts/list", id~, ..) =>
-      Some(Response(id~, payload=Ok({ "prompts": [] })))
+      Some(
+        Response(
+          id~,
+          payload=Ok({
+            "prompts": Array(
+              self.prompts
+              .iter()
+              .map(fn {
+                (name, { description, arguments, .. }) =>
+                  (
+                    {
+                      "name": String(name),
+                      "description": String(description),
+                      "arguments": Array(
+                        arguments.map(fn {
+                          { name, description, required } =>
+                            {
+                              "name": String(name),
+                              "description": String(description.or("")),
+                              "required": if required is Some(true) {
+                                True
+                              } else {
+                                False
+                              },
+                            }
+                        }),
+                      ),
+                    } : Json)
+              })
+              .collect(),
+            ),
+          }),
+        ),
+      )
+    Request(method_="prompts/get", id~, params~) =>
+      if params is { "name": String(name), "arguments": Object(arguments), .. } &&
+        self.prompts.get(name) is Some(prompt) {
+        for argument in prompt.arguments {
+          if argument.required is Some(true) &&
+            not(arguments.contains(argument.name)) {
+            return Some(
+              Response(
+                id~,
+                payload=Err(RPCError::{
+                  code: -32602,
+                  message: "Failed to validate prompt get argument due to missing argument \{argument.name}",
+                  data: None,
+                }),
+              ),
+            )
+          }
+        }
+        let response = (prompt.cb)(arguments)
+        return Some(
+          Response(
+            id~,
+            payload=Ok({
+              "messages": Array(
+                response.map(fn {
+                  { role, message: Text(text~) } =>
+                    {
+                      "role": match role {
+                        User => "user"
+                        Assistant => "assistant"
+                      },
+                      "content": { "type": "text", "text": String(text) },
+                    }
+                  { role, message: Image(data~, mimeType~) } =>
+                    {
+                      "role": match role {
+                        User => "user"
+                        Assistant => "assistant"
+                      },
+                      "content": {
+                        "type": "image",
+                        "data": String(data),
+                        "mimeType": String(mimeType),
+                      },
+                    }
+                  { role, message: Resource(uri~, mimeType~, text~) } =>
+                    {
+                      "role": match role {
+                        User => "user"
+                        Assistant => "assistant"
+                      },
+                      "content": {
+                        "type": "resource",
+                        "uri": String(uri),
+                        "mimeType": String(mimeType),
+                        "text": String(text),
+                      },
+                    }
+                }),
+              ),
+            }),
+          ),
+        )
+      } else {
+        return Some(
+          Response(
+            id~,
+            payload=Err(RPCError::{
+              code: -32602,
+              message: "Failed to validate prompt get payload",
+              data: None,
+            }),
+          ),
+        )
+      }
     Request(method_="resources/list", id~, ..) =>
       Some(Response(id~, payload=Ok({ "resources": [] })))
     Request(method_="resources/templates/list", id~, ..) =>
@@ -276,7 +384,7 @@ pub fn add_tool(
   name~ : String,
   description~ : String,
   inputSchema~ : Schema,
-  cb~ : async (Json, Server) -> Response!
+  cb~ : async (Json, Server) -> Response
 ) -> Unit {
   self.tools[name] = Tool::{ description, inputSchema, cb }
   if self.running {
@@ -296,6 +404,38 @@ pub fn remove_tool(self : Server, name : String) -> Unit {
     @promise.spawn(async fn(_defer) {
       self.out_channel.push!!(
         Notification(method_="notifications/tools/list_changed", params={}),
+      )
+    })
+    |> ignore
+  }
+}
+
+///|
+pub fn add_prompt(
+  self : Server,
+  name~ : String,
+  description~ : String,
+  arguments~ : Array[PromptArgument] = [],
+  cb~ : (Map[String, Json]) -> Array[PromptMessage]
+) -> Unit {
+  self.prompts[name] = Prompt::{ description, arguments, cb }
+  if self.running {
+    @promise.spawn(async fn(_defer) {
+      self.out_channel.push!!(
+        Notification(method_="notifications/prompts/list_changed", params={}),
+      )
+    })
+    |> ignore
+  }
+}
+
+///|
+pub fn remove_prompt(self : Server, name : String) -> Unit {
+  self.prompts.remove(name)
+  if self.running {
+    @promise.spawn(async fn(_defer) {
+      self.out_channel.push!!(
+        Notification(method_="notifications/prompts/list_changed", params={}),
       )
     })
     |> ignore

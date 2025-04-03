@@ -28,24 +28,45 @@ pub fn run() -> Result[Unit, Unit] {
       "location",
     ]),
     cb=async fn(args, server) {
-      guard args is { "location": String(city), .. }
-      let weather = @http.fetch!!(
-        @http.request!(
-          "wttr.in",
-          path="/" + city.replace_all(old=" ", new="%20") + "?format=4",
-        ),
-      )
-      server.log!!("Got weather response")
-      server.log!!("Roots: \{server.list_roots!!()}")
-      @mcp.Response::{
-        isError: weather.status() != 200,
-        payload: Text(
-          text=if weather.status() == 200 {
-            @http.text(weather.consume().unwrap()).0.await!!()
-          } else {
-            "Failed to fetch weather data: \{@http.text(weather.consume().unwrap()).0.await!!()}"
-          },
-        ),
+      try {
+        guard args is { "location": String(city), .. }
+        let weather = @http.fetch!!(
+          @http.request!(
+            "wttr.in",
+            path="/" + city.replace_all(old=" ", new="%20") + "?format=4",
+          ),
+        )
+        server.log!!("Got weather response")
+        server.log!!("Roots: \{server.list_roots!!()}")
+        @mcp.Response::{
+          isError: weather.status() != 200,
+          payload: [
+            Text(
+              text=if weather.status() == 200 {
+                @http.text(weather.consume().unwrap()).0.await!!()
+              } else {
+                "Failed to fetch weather data: \{@http.text(weather.consume().unwrap()).0.await!!()}"
+              },
+            ),
+          ],
+        }
+      } catch {
+        error =>
+          @mcp.Response::{
+            isError: true,
+            payload: [Text(text="Failed to fetch weather data: \{error}")],
+          }
+      }
+    },
+  )
+  server.add_prompt(
+    name="get weather",
+    description="instruct the AI to get weather for a city",
+    arguments=[@mcp.prompt_argument("city")],
+    cb=fn {
+      { "city"? : city, .. } => {
+        let city = city.or("Beijing")
+        [{ role: User, message: Text(text="Get weather for \{city}") }]
       }
     },
   )

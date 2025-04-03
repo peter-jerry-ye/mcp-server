@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 typealias Schema = @schema.T
 
 ///|
@@ -31,11 +32,46 @@ pub(all) enum LogLevel {
 priv struct Tool {
   description : String
   inputSchema : Schema
-  cb : async (Json, Server) -> Response!
+  cb : async (Json, Server) -> Response
 }
 
 ///|
-pub(all) enum ResponsePayload {
+priv struct Prompt {
+  description : String
+  arguments : Array[PromptArgument]
+  cb : (Map[String, Json]) -> Array[PromptMessage]
+}
+
+///|
+pub(all) enum Role {
+  User
+  Assistant
+}
+
+///|
+pub(all) struct PromptMessage {
+  role : Role
+  message : Content
+}
+
+///|
+struct PromptArgument {
+  name : String
+  description : String?
+  required : Bool?
+}
+
+///|
+pub fn prompt_argument(
+  name : String,
+  description? : String,
+  required? : Bool
+) -> PromptArgument {
+  { name, description, required }
+}
+
+///|
+pub(all) enum Content {
   Text(text~ : String)
   Image(data~ : String, mimeType~ : String)
   Resource(uri~ : String, mimeType~ : String, text~ : String)
@@ -44,7 +80,7 @@ pub(all) enum ResponsePayload {
 ///|
 pub(all) struct Response {
   isError : Bool
-  payload : ResponsePayload
+  payload : Array[Content]
 }
 
 ///|
