@@ -71,20 +71,28 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
   @promise.spawn(async fn(defer) {
     defer(fn() { self.running = false })
     let request = self.in_channel.pop!!()
-    guard request
-      is Request(
-        id~,
-        method_="initialize",
-        params={
-          "protocolVersion": "2024-11-05",
-          "capabilities": capabilities,
-          "clientInfo": clientInfo,
-          ..
-        }
-      ) else {
+    guard request is Request(id~, method_="initialize", params~) else {
       @io.println!!(
         "Invalid initialization request \{request}",
         stream=@io.stderr,
+      )
+    }
+    guard params
+      is {
+        "protocolVersion": "2024-11-05",
+        "capabilities": capabilities,
+        "clientInfo": clientInfo,
+        ..
+      } else {
+      self.out_channel.push!!(
+        Response(
+          id~,
+          payload=Err({
+            code: -32602,
+            message: "Unsupported protocol version",
+            data: Some({ "supported": ["2024-11-05"] }),
+          }),
+        ),
       )
     }
     if id is Number(id) {
