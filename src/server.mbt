@@ -104,7 +104,11 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
       id~,
       payload=Ok({
         "protocolVersion": "2024-11-05",
-        "capabilities": { "logging": {}, "tools": { "listChanged": true } },
+        "capabilities": {
+          "logging": {},
+          "tools": { "listChanged": true },
+          "prompts": { "listChanged": true },
+        },
         "serverInfo": { "name": "mcp-cli", "version": "0.1.0" },
       }),
     )
