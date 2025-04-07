@@ -22,9 +22,6 @@ struct Server {
   mut capabilities : Json
   mut clientInfo : Json
   callbacks : Map[Id, @channel.T[Message]]
-  // Currently try to use id as key for callbacks.
-  // Maybe we need to have UUID for more certainty.
-  mut used_id : UInt
 }
 
 ///|
@@ -38,7 +35,6 @@ pub fn new() -> Server {
     capabilities: {},
     clientInfo: {},
     callbacks: {},
-    used_id: 0,
   }
 }
 
@@ -97,9 +93,6 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
         ),
       )
     }
-    if id is Number(id) {
-      self.used_id = @math.maximum(self.used_id, id.to_uint())
-    }
     let response = Response(
       id~,
       payload=Ok({
@@ -146,9 +139,6 @@ pub fn serve(self : Server) -> Result[Unit, Unit] {
 ///|
 async fn handle(self : Server, message : Message) -> Message?! {
   // Check the used ids
-  if message is Request(id=Number(id), ..) {
-    self.used_id = @math.maximum(self.used_id, id.to_uint())
-  }
   match message {
     Request(method_="tools/list", id~, ..) =>
       Some(
@@ -363,13 +353,6 @@ async fn handle(self : Server, message : Message) -> Message?! {
 }
 
 ///|
-fn next_id(self : Server) -> UInt {
-  let id = self.used_id + 1
-  self.used_id = id
-  id
-}
-
-///|
 pub async fn log(
   self : Server,
   message : Json,
@@ -450,7 +433,10 @@ pub fn remove_prompt(self : Server, name : String) -> Unit {
 pub async fn list_roots(self : Server) -> Array[Root]! {
   if self.capabilities is { "roots": _, .. } && self.running {
     let channel = @channel.make(size=1)
-    let id = Number(self.next_id().to_uint64().to_double())
+    let uuid = @uuid.from_bytes!(
+      Bytes::from_fixedarray(@random.get_random_bytes(16)),
+    ).as_version(V4)
+    let id = String(uuid.to_string())
     self.callbacks[id] = channel
     self.out_channel.push!!(Request(id~, method_="roots/list", params={}))
     let response = channel.pop!!()
