@@ -13,14 +13,14 @@
 // limitations under the License.
 
 ///| https://www.jsonrpc.org/specification
-priv enum Message {
+pub(all) enum Message {
   Request(id~ : Id, method_~ : String, params~ : Map[String, Json])
   Notification(method_~ : String, params~ : Map[String, Json])
   Response(id~ : Id, payload~ : Result[Map[String, Json], RPCError])
 } derive(Eq, Show)
 
 ///|
-impl @json.FromJson for Message with from_json(json, path) {
+pub impl @json.FromJson for Message with from_json(json, path) {
   match json {
     {
       "jsonrpc": "2.0",
@@ -78,7 +78,7 @@ impl @json.FromJson for Message with from_json(json, path) {
 }
 
 ///|
-impl ToJson for Message with to_json(self) {
+pub impl ToJson for Message with to_json(self) {
   match self {
     Request(id~, method_~, params~) =>
       {
@@ -117,7 +117,7 @@ test {
 }
 
 ///|
-priv struct RPCError {
+pub(all) struct RPCError {
   code : Int
   message : String
   data : Json?
@@ -140,13 +140,13 @@ test {
 }
 
 ///|
-priv enum Id {
+pub(all) enum Id {
   String(String)
   Number(Double)
 } derive(Eq, Show, Hash)
 
 ///|
-impl @json.FromJson for Id with from_json(json, path) {
+pub impl @json.FromJson for Id with from_json(json, path) {
   match json {
     String(s) => String(s)
     Number(n) => Number(n)
@@ -155,7 +155,7 @@ impl @json.FromJson for Id with from_json(json, path) {
 }
 
 ///|
-impl ToJson for Id with to_json(self) {
+pub impl ToJson for Id with to_json(self) {
   match self {
     String(s) => String(s)
     Number(n) => Number(n)

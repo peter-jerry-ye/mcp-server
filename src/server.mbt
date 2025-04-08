@@ -22,118 +22,88 @@ struct Server {
   mut capabilities : Json
   mut clientInfo : Json
   callbacks : Map[Id, @channel.T[Message]]
+  random : @random.Rand
 }
 
 ///|
-pub fn new() -> Server {
+pub fn new(
+  in_channel : @channel.T[Message],
+  out_channel : @channel.T[Message],
+  seed : Bytes
+) -> Server {
   Server::{
     tools: {},
     prompts: {},
-    in_channel: @channel.make(size=10),
-    out_channel: @channel.make(size=10),
+    in_channel,
+    out_channel,
     running: false,
     capabilities: {},
     clientInfo: {},
     callbacks: {},
+    random: @random.new(seed~),
   }
 }
 
 ///|
-pub fn serve(self : Server) -> Result[Unit, Unit] {
+pub async fn serve(self : Server) -> Unit! {
   self.running = true
-  // read from stdin for input channel
-  @promise.spawn(async fn(_defer) {
-    while self.running {
-      try {
-        let message = @io.read_line!!() |> @json.parse!() |> @json.from_json!()
-        self.in_channel.push!!(message)
-      } catch {
-        @streams.Closed => break
-        e => {
-          @io.println!!(e.to_string(), stream=@io.stderr)
-          break
-        }
-      }
-    }
-  })
-  |> ignore
-  // write to stdout for output channel
-  @promise.spawn(async fn(_defer) {
-    while true {
-      let message = self.out_channel.pop!!()
-      @io.println!!(message.to_json() |> @json.stringify)
-    }
-  })
-  |> ignore
   // handle messages
-  @promise.spawn(async fn(defer) {
-    defer(fn() { self.running = false })
-    let request = self.in_channel.pop!!()
-    guard request is Request(id~, method_="initialize", params~) else {
-      @io.println!!(
-        "Invalid initialization request \{request}",
-        stream=@io.stderr,
-      )
-    }
-    guard params
-      is {
-        "protocolVersion": "2024-11-05",
-        "capabilities": capabilities,
-        "clientInfo": clientInfo,
-        ..
-      } else {
-      self.out_channel.push!!(
-        Response(
-          id~,
-          payload=Err({
-            code: -32602,
-            message: "Unsupported protocol version",
-            data: Some({ "supported": ["2024-11-05"] }),
-          }),
-        ),
-      )
-    }
-    let response = Response(
-      id~,
-      payload=Ok({
-        "protocolVersion": "2024-11-05",
-        "capabilities": {
-          "logging": {},
-          "tools": { "listChanged": true },
-          "prompts": { "listChanged": true },
-        },
-        "serverInfo": { "name": "mcp-cli", "version": "0.1.0" },
-      }),
+  let request = self.in_channel.pop!!()
+  guard request is Request(id~, method_="initialize", params~) else {
+    fail!("Invalid initialization request \{request}")
+  }
+  guard params
+    is {
+      "protocolVersion": "2024-11-05",
+      "capabilities": capabilities,
+      "clientInfo": clientInfo,
+      ..
+    } else {
+    self.out_channel.push!!(
+      Response(
+        id~,
+        payload=Err({
+          code: -32602,
+          message: "Unsupported protocol version",
+          data: Some({ "supported": ["2024-11-05"] }),
+        }),
+      ),
     )
-    self.out_channel.push!!(response)
-    let notification = self.in_channel.pop!!()
-    guard notification
-      is Notification(method_="notifications/initialized", params=_) else {
-      @io.println!!(
-        "Invalid initializaiton notification \{notification}",
-        stream=@io.stderr,
-      )
-    }
-    self.capabilities = capabilities
-    self.clientInfo = clientInfo
-    while true {
-      let message = self.in_channel.pop!!()
-      @promise.spawn(async fn(_defer) {
-        try {
-          self.handle!!(message)
-        } catch {
-          error => @io.println!!(error.to_string(), stream=@io.stderr)
-        } else {
-          Some(response) => self.out_channel.push!!(response)
-          None => ()
-        }
-      })
-      |> ignore
-    }
-  })
-  |> ignore
-  @io.event_loop.run()
-  Ok(())
+  }
+  let response = @rpc.Response(
+    id~,
+    payload=Ok({
+      "protocolVersion": "2024-11-05",
+      "capabilities": {
+        "logging": {},
+        "tools": { "listChanged": true },
+        "prompts": { "listChanged": true },
+      },
+      "serverInfo": { "name": "mcp-cli", "version": "0.1.0" },
+    }),
+  )
+  self.out_channel.push!!(response)
+  let notification = self.in_channel.pop!!()
+  guard notification
+    is Notification(method_="notifications/initialized", params=_) else {
+    fail!("Invalid initializaiton notification \{notification}")
+  }
+  self.capabilities = capabilities
+  self.clientInfo = clientInfo
+  while true {
+    let message = self.in_channel.pop!!()
+    @promise.spawn(async fn(_defer) {
+      try {
+        self.handle!!(message)
+      } catch {
+        error => self.log!!(String(error.to_string()), level=Error)
+      } else {
+        Some(response) => self.out_channel.push!!(response)
+        None => ()
+      }
+    })
+    |> ignore
+  }
 }
 
 ///|
@@ -338,15 +308,12 @@ async fn handle(self : Server, message : Message) -> Message?! {
       if self.callbacks[id] is Some(channel) {
         @promise.spawn(fn(_dfer) { channel.push!!(response) }) |> ignore
       } else {
-        @io.println!!(
-          "Unexpected response for request \{id}: \{response}",
-          stream=@io.stderr,
-        )
+        fail!("Unexpected response for request \{id}: \{response}")
       }
       None
     }
     other => {
-      @io.println!!("Unhandled \{other}", stream=@io.stderr)
+      fail!("Unhandled \{other}")
       None
     }
   }
@@ -358,7 +325,7 @@ pub async fn log(
   message : Json,
   level~ : LogLevel = Info
 ) -> Unit {
-  let notification = Notification(method_="notifications/message", params={
+  let notification = @rpc.Notification(method_="notifications/message", params={
     "level": String(level.to_string().to_lower()),
     "data": message,
   })
@@ -433,28 +400,22 @@ pub fn remove_prompt(self : Server, name : String) -> Unit {
 pub async fn list_roots(self : Server) -> Array[Root]! {
   if self.capabilities is { "roots": _, .. } && self.running {
     let channel = @channel.make(size=1)
-    let uuid = @uuid.from_bytes!(
-      Bytes::from_fixedarray(@random.get_random_bytes(16)),
-    ).as_version(V4)
-    let id = String(uuid.to_string())
+    let lower = self.random.uint64().to_le_bytes()
+    let higher = self.random.uint64().to_le_bytes()
+    let random = FixedArray::make(16, b'\x00')
+    random.blit_from_bytes(0, lower, 0, 8)
+    random.blit_from_bytes(8, higher, 0, 8)
+    let uuid = @uuid.from_bytes!(Bytes::from_fixedarray(random)).as_version(V4)
+    let id = @rpc.String(uuid.to_string())
     self.callbacks[id] = channel
     self.out_channel.push!!(Request(id~, method_="roots/list", params={}))
     let response = channel.pop!!()
     self.callbacks.remove(id)
-    // TODO: better error handling
     guard response is Response(payload~, ..) else {
-      @io.println!!(
-        "Unexpected message for request roots/list: \{response}",
-        stream=@io.stderr,
-      )
-      return []
+      fail!("Unexpected message for request roots/list: \{response}")
     }
     guard payload is Ok({ "roots": Array(roots), .. }) else {
-      @io.println!!(
-        "Unexpected payload for request roots/list",
-        stream=@io.stderr,
-      )
-      return []
+      fail!("Unexpected payload for request roots/list")
     }
     roots.map(fn {
       { "uri": String(uri), "name"? : name, .. } =>

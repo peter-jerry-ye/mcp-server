@@ -16,6 +16,15 @@
 typealias Schema = @schema.T
 
 ///|
+typealias Message = @rpc.Message
+
+///|
+typealias Id = @rpc.Id
+
+///|
+typealias RPCError = @rpc.RPCError
+
+///|
 /// RFC 5424
 pub(all) enum LogLevel {
   Debug

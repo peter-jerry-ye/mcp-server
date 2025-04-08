@@ -17,7 +17,33 @@
 /// This function handles the initialization step of MCP Server
 /// and the consequent messages' i/o.
 pub fn run() -> Result[Unit, Unit] {
-  let server = @mcp.new()
+  // read from stdin for input channel
+  let in_channel : @channel.T[@rpc.Message] = @channel.make(size=10)
+  @promise.spawn(async fn(_defer) {
+    while true {
+      try {
+        let message = @io.read_line!!() |> @json.parse!() |> @json.from_json!()
+        in_channel.push!!(message)
+      } catch {
+        @streams.Closed => break
+        e => {
+          @io.println!!(e.to_string(), stream=@io.stderr)
+          break
+        }
+      }
+    }
+  })
+  |> ignore
+  let out_channel : @channel.T[@rpc.Message] = @channel.make(size=10)
+  // write to stdout for output channel
+  @promise.spawn(async fn(_defer) {
+    while true {
+      let message = out_channel.pop!!()
+      @io.println!!(message.to_json() |> @json.stringify)
+    }
+  })
+  |> ignore
+  let server = @mcp.new(in_channel, out_channel, Bytes::from_fixedarray(@random.get_random_bytes(32)))
   server.add_tool(
     name="get_weather",
     description=
@@ -70,5 +96,7 @@ pub fn run() -> Result[Unit, Unit] {
       }
     },
   )
-  server.serve()
+  @promise.spawn(async fn(_defer) { server.serve!!() }) |> ignore
+  @io.event_loop.run()
+  Ok(())
 }
