@@ -31,6 +31,7 @@
       "alias": "rpc"
     },
     "peter-jerry-ye/io/channel",
+    "peter-jerry-ye/io/stream",
     "peter-jerry-ye/io/io",
     "peter-jerry-ye/wasi-imports/interface/wasi/io/streams",
     "peter-jerry-ye/wasi-imports/interface/wasi/random/random"

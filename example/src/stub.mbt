@@ -19,15 +19,20 @@
 pub fn run() -> Result[Unit, Unit] {
   // read from stdin for input channel
   let in_channel : @channel.T[@rpc.Message] = @channel.make(size=10)
+  let reader = @stream.buffered_reader(@stream.input_stream_reader(stdin))
+  let out_writer = @stream.output_stream_writer(stdout)
+  let err_writer = @stream.output_stream_writer(stderr)
   @promise.spawn(async fn(_defer) {
     while true {
       try {
-        let message = @io.read_line!!() |> @json.parse!() |> @json.from_json!()
+        let message = reader.read_line().await!!()
+          |> @json.parse!()
+          |> @json.from_json!()
         in_channel.push!!(message)
       } catch {
         @streams.Closed => break
         e => {
-          @io.println!!(e.to_string(), stream=@io.stderr)
+          err_writer.write("\{e}\n").await!!()
           break
         }
       }
@@ -39,11 +44,15 @@ pub fn run() -> Result[Unit, Unit] {
   @promise.spawn(async fn(_defer) {
     while true {
       let message = out_channel.pop!!()
-      @io.println!!(message.to_json() |> @json.stringify)
+      out_writer.write("\{message.to_json() |> @json.stringify}\n").await!!()
     }
   })
   |> ignore
-  let server = @mcp.new(in_channel, out_channel, Bytes::from_fixedarray(@random.get_random_bytes(32)))
+  let server = @mcp.new(
+    in_channel,
+    out_channel,
+    Bytes::from_fixedarray(@random.get_random_bytes(32)),
+  )
   server.add_tool(
     name="get_weather",
     description=
