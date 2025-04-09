@@ -26,11 +26,6 @@
       "path": "peter-jerry-ye/mcp-server/schema",
       "alias": "schema"
     },
-    {
-      "path": "peter-jerry-ye/mcp-server/rpc",
-      "alias": "rpc"
-    },
-    "peter-jerry-ye/io/channel",
     "peter-jerry-ye/io/stream",
     "peter-jerry-ye/io/io",
     "peter-jerry-ye/wasi-imports/interface/wasi/io/streams",

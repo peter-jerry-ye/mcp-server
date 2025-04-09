@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "deps": {
     "peter-jerry-ye/async": "0.1.1",
-    "peter-jerry-ye/io": "0.2.1",
+    "peter-jerry-ye/io": "0.2.2",
     "moonbitlang/x": "0.4.23"
   },
   "repository": "https://github.com/peter-jerry-ye/mcp-server",

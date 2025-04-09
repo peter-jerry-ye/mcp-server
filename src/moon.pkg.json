@@ -4,6 +4,7 @@
     "peter-jerry-ye/io/channel",
     "peter-jerry-ye/mcp-server/schema",
     "peter-jerry-ye/mcp-server/rpc",
-    "moonbitlang/x/uuid"
+    "moonbitlang/x/uuid",
+    "peter-jerry-ye/io/stream"
   ]
 }

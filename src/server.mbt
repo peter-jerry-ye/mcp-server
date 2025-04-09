@@ -26,16 +26,12 @@ struct Server {
 }
 
 ///|
-pub fn new(
-  in_channel : @channel.T[Message],
-  out_channel : @channel.T[Message],
-  seed : Bytes
-) -> Server {
+pub fn new(seed : Bytes) -> Server {
   Server::{
     tools: {},
     prompts: {},
-    in_channel,
-    out_channel,
+    in_channel: @channel.make(size=10),
+    out_channel: @channel.make(size=10),
     running: false,
     capabilities: {},
     clientInfo: {},
@@ -45,65 +41,100 @@ pub fn new(
 }
 
 ///|
-pub async fn serve(self : Server) -> Unit! {
+pub fn serve(
+  self : Server,
+  stdin~ : &@stream.Reader,
+  stdout~ : &@stream.Writer,
+  stderr~ : &@stream.Writer
+) -> Unit {
+  let stdin = @stream.buffered_reader(stdin)
   self.running = true
-  // handle messages
-  let request = self.in_channel.pop!!()
-  guard request is Request(id~, method_="initialize", params~) else {
-    fail!("Invalid initialization request \{request}")
-  }
-  guard params
-    is {
-      "protocolVersion": "2024-11-05",
-      "capabilities": capabilities,
-      "clientInfo": clientInfo,
-      ..
-    } else {
-    self.out_channel.push!!(
-      Response(
-        id~,
-        payload=Err({
-          code: -32602,
-          message: "Unsupported protocol version",
-          data: Some({ "supported": ["2024-11-05"] }),
-        }),
-      ),
-    )
-  }
-  let response = @rpc.Response(
-    id~,
-    payload=Ok({
-      "protocolVersion": "2024-11-05",
-      "capabilities": {
-        "logging": {},
-        "tools": { "listChanged": true },
-        "prompts": { "listChanged": true },
-      },
-      "serverInfo": { "name": "mcp-cli", "version": "0.1.0" },
-    }),
-  )
-  self.out_channel.push!!(response)
-  let notification = self.in_channel.pop!!()
-  guard notification
-    is Notification(method_="notifications/initialized", params=_) else {
-    fail!("Invalid initializaiton notification \{notification}")
-  }
-  self.capabilities = capabilities
-  self.clientInfo = clientInfo
-  while true {
-    let message = self.in_channel.pop!!()
-    @promise.spawn(async fn(_defer) {
+  // read from stdin for input channel
+  @promise.spawn(async fn(_defer) {
+    while self.running {
       try {
-        self.handle!!(message)
+        let message = stdin.read_line().await!!()
+          |> @json.parse!()
+          |> @json.from_json!()
+        self.in_channel.push!!(message)
       } catch {
-        error => self.log!!(String(error.to_string()), level=Error)
-      } else {
-        Some(response) => self.out_channel.push!!(response)
-        None => ()
+        e => {
+          stderr.write("\{e}\n").await!!()
+          break
+        }
       }
-    })
-    |> ignore
-  }
+    }
+  })
+  |> ignore
+  // write to stdout for output channel
+  @promise.spawn(async fn(_defer) {
+    while true {
+      let message = self.out_channel.pop!!()
+      stdout.write("\{message.to_json() |> @json.stringify}\n").await!!()
+    }
+  })
+  |> ignore
+  // handle messages
+  @promise.spawn(async fn(defer) {
+    defer(fn() { self.running = false })
+    let request = self.in_channel.pop!!()
+    guard request is Request(id~, method_="initialize", params~) else {
+      fail!("Invalid initialization request \{request}")
+    }
+    guard params
+      is {
+        "protocolVersion": "2024-11-05",
+        "capabilities": capabilities,
+        "clientInfo": clientInfo,
+        ..
+      } else {
+      self.out_channel.push!!(
+        Response(
+          id~,
+          payload=Err({
+            code: -32602,
+            message: "Unsupported protocol version",
+            data: Some({ "supported": ["2024-11-05"] }),
+          }),
+        ),
+      )
+    }
+    let response = @rpc.Response(
+      id~,
+      payload=Ok({
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "logging": {},
+          "tools": { "listChanged": true },
+          "prompts": { "listChanged": true },
+        },
+        "serverInfo": { "name": "mcp-cli", "version": "0.1.0" },
+      }),
+    )
+    self.out_channel.push!!(response)
+    let notification = self.in_channel.pop!!()
+    guard notification
+      is Notification(method_="notifications/initialized", params=_) else {
+      fail!("Invalid initializaiton notification \{notification}")
+    }
+    self.capabilities = capabilities
+    self.clientInfo = clientInfo
+    while true {
+      let message = self.in_channel.pop!!()
+      @promise.spawn(async fn(_defer) {
+        try {
+          self.handle!!(message)
+        } catch {
+          error => self.log!!(String(error.to_string()), level=Error)
+        } else {
+          Some(response) => self.out_channel.push!!(response)
+          None => ()
+        }
+      })
+      |> ignore
+    }
+  })
+  |> ignore
 }
 
 ///|
