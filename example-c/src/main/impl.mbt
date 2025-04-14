@@ -5,6 +5,11 @@ struct Stream {
 }
 
 ///|
+fn stream(stream : @uv.Stream) -> Stream {
+  { stream, closed: false }
+}
+
+///|
 impl @stream.Closable for Stream with closed(self) {
   self.closed ||
   (
@@ -34,17 +39,13 @@ impl @stream.InputStream for Stream with read(self, len) {
 ///|
 async fn read_stream(stream : @uv.Stream, len : UInt64) -> Bytes! {
   let buffer = Bytes::make(len.to_int(), b'\x00')
-  let mut start = 0
   shift!!(fn(resolve, reject) {
     try {
       stream.read_start!(
-        fn(_stream, _len) { buffer[start:] },
-        fn(_stream, nread, _buf) {
-          start += nread
-          if start == len.to_int() {
-            stream.read_stop?() |> ignore
-            resolve(())
-          }
+        fn(_stream, _len) { buffer[:] },
+        fn(_stream, _nread, _buf) {
+          stream.read_stop?() |> ignore
+          resolve([..buffer[:]])
         },
         fn(_stream, err) {
           stream.read_stop?() |> ignore
@@ -55,7 +56,6 @@ async fn read_stream(stream : @uv.Stream, len : UInt64) -> Bytes! {
       e => reject(e)
     }
   })
-  buffer
 }
 
 ///|
@@ -78,6 +78,55 @@ async fn write_stream(stream : @uv.Stream, bytes : Bytes) -> Unit! {
       stream.write!([bytes[:]], fn(_write) { resolve(()) }, fn(_stream, err) {
         reject(err)
       })
+    } catch {
+      e => reject(e)
+    }
+  })
+}
+
+///|
+struct File {
+  file : @uv.File
+  uv : @uv.Loop
+}
+
+///|
+fn file(file : @uv.File, uv : @uv.Loop) -> File {
+  { file, uv }
+}
+
+///|
+impl @stream.Closable for File with close(_self) {
+
+}
+
+///|
+impl @stream.Closable for File with closed(_self) {
+  // TODO
+  false
+}
+
+///|
+impl @stream.OutputStream for File with writable(self) {
+  not(self.closed())
+}
+
+///|
+impl @stream.OutputStream for File with write(self, bytes) {
+  @promise.spawn(fn(_defer) { write_file!!(self, bytes) })
+}
+
+///|
+async fn write_file(file : File, bytes : Bytes) -> Unit! {
+  shift!!(fn(resolve, reject) {
+    try {
+      file.uv.fs_write!(
+        file.file,
+        [bytes[:]],
+        -1,
+        fn(_write, _len) { resolve(()) },
+        fn(_file, err) { reject(err) },
+      )
     } catch {
       e => reject(e)
     }
