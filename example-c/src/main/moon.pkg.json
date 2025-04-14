@@ -1,0 +1,11 @@
+{
+  "is-main": true,
+  "import": [
+    "tonyfettes/uv",
+    "peter-jerry-ye/io/stream",
+    "peter-jerry-ye/async/promise"
+  ],
+  "link": {
+    "native": {}
+  }
+}
