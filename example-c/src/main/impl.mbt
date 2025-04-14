@@ -72,6 +72,11 @@ impl @stream.OutputStream for Stream with write(self, bytes) {
 }
 
 ///|
+impl @stream.Flushable for Stream with flush(_self) {
+  @promise.resolve(())
+}
+
+///|
 async fn write_stream(stream : @uv.Stream, bytes : Bytes) -> Unit! {
   shift!!(fn(resolve, reject) {
     try {
@@ -114,6 +119,12 @@ impl @stream.OutputStream for File with writable(self) {
 ///|
 impl @stream.OutputStream for File with write(self, bytes) {
   @promise.spawn(fn(_defer) { write_file!!(self, bytes) })
+}
+
+///|
+impl @stream.Flushable for File with flush(_self) {
+  // TODO: fsync
+  @promise.resolve(())
 }
 
 ///|
