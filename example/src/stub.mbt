@@ -71,9 +71,9 @@ pub fn run() -> Result[Unit, Unit] {
     },
   )
   server.serve(
-    stdin=@stream.input_stream_reader(stdin),
-    stdout=@stream.output_stream_writer(stdout),
-    stderr=@stream.output_stream_writer(stderr),
+    stdin=@stream.input_stream_reader(@io.stdin_stream),
+    stdout=@stream.output_stream_writer(@io.stdout_stream),
+    stderr=@stream.output_stream_writer(@io.stderr_stream),
   )
   @io.event_loop.run()
   Ok(())

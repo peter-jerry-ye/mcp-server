@@ -3,10 +3,7 @@
   "version": "0.1.0",
   "deps": {
     "tonyfettes/uv": "0.1.10",
-    "peter-jerry-ye/async": "0.1.1",
-    "peter-jerry-ye/io": {
-      "path": "../../io"
-    }
+    "peter-jerry-ye/async": "0.1.2"
   },
   "readme": "README.md",
   "repository": "",

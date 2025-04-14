@@ -1,10 +1,10 @@
 {
   "import": [
     "peter-jerry-ye/async/promise",
-    "peter-jerry-ye/io/channel",
+    "peter-jerry-ye/async/channel",
+    "peter-jerry-ye/async/stream",
     "peter-jerry-ye/mcp-server/schema",
     "peter-jerry-ye/mcp-server/rpc",
-    "moonbitlang/x/uuid",
-    "peter-jerry-ye/io/stream"
+    "moonbitlang/x/uuid"
   ]
 }
