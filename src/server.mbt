@@ -141,6 +141,7 @@ pub fn serve(
 async fn handle(self : Server, message : Message) -> Message?! {
   // Check the used ids
   match message {
+    Request(method_="ping", id~, ..) => Some(Response(id~, payload=Ok({})))
     Request(method_="tools/list", id~, ..) =>
       Some(
         Response(
