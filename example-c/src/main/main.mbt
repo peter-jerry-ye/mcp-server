@@ -45,38 +45,10 @@ fn main {
               })
             })
             let stdout = @promise.spawn(async fn(_defer) {
-              let reader = out.to_stream()
-                |> stream
-                |> @stream.input_stream_reader
-                |> @stream.buffered_reader
-              let buffer = StringBuilder::new()
-              try {
-                while true {
-                  let line = reader.read_line().await!!()
-                  buffer..write_string(line).write_char('\n')
-                }
-                panic()
-              } catch {
-                @uv.Errno(EOF) => buffer.to_string()
-                e => raise e
-              }
+              collect_output!!(out.to_stream() |> stream)
             })
             let stderr = @promise.spawn(async fn(_defer) {
-              let reader = err.to_stream()
-                |> stream
-                |> @stream.input_stream_reader
-                |> @stream.buffered_reader
-              let buffer = StringBuilder::new()
-              try {
-                while true {
-                  let line = reader.read_line().await!!()
-                  buffer..write_string(line).write_char('\n')
-                }
-                panic()
-              } catch {
-                @uv.Errno(EOF) => buffer.to_string()
-                e => raise e
-              }
+              collect_output!!(err.to_stream() |> stream)
             })
             let exit_status = process.await!!()
             if exit_status == 0 {
@@ -110,5 +82,21 @@ fn main {
     uv.close!()
   } catch {
     e => println("Error occurred: \{e}")
+  }
+}
+
+///|
+async fn collect_output[T : @stream.InputStream](stream : T) -> String! {
+  let buffer = StringBuilder::new()
+  let reader = stream |> @stream.input_stream_reader |> @stream.buffered_reader
+  try {
+    while true {
+      let line = reader.read_line().await!!()
+      buffer..write_string(line).write_char('\n')
+    }
+    panic()
+  } catch {
+    @uv.Errno(EOF) => buffer.to_string()
+    e => raise e
   }
 }

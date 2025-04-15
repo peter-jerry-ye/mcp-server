@@ -24,11 +24,12 @@ impl @stream.Closable for Stream with closed(self) {
 ///|
 impl @stream.Closable for Stream with close(self) {
   self.stream.close(ignore)
+  self.closed = true
 }
 
 ///|
 impl @stream.InputStream for Stream with readable(self) {
-  not(self.closed())
+  not(self.closed()) && self.stream.is_readable()
 }
 
 ///|
@@ -63,7 +64,7 @@ async fn shift[A](f : ((A) -> Unit, (Error) -> Unit) -> Unit) -> A! = "%async.su
 
 ///|
 impl @stream.OutputStream for Stream with writable(self) {
-  not(self.closed())
+  not(self.closed()) && self.stream.is_writable()
 }
 
 ///|
