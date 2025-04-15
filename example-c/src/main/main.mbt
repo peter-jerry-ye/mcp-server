@@ -11,8 +11,8 @@ fn main {
         inputSchema=@schema.object({}),
         cb=async fn(_json, _server) {
           try {
-            let out = @uv.Pipe::new!(uv, ipc=true)
-            let err = @uv.Pipe::new!(uv, ipc=true)
+            let out = @uv.Pipe::new!(uv)
+            let err = @uv.Pipe::new!(uv)
             let options = @uv.ProcessOptions::new(
               "moon",
               ["moon", "version", "--all"],
