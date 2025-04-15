@@ -2,8 +2,11 @@
   "name": "username/hello",
   "version": "0.1.0",
   "deps": {
-    "tonyfettes/uv": "0.1.10",
-    "peter-jerry-ye/async": "0.1.2"
+    "tonyfettes/uv": "0.1.14",
+    "peter-jerry-ye/async": "0.1.2",
+    "peter-jerry-ye/mcp-server": {
+      "path": ".."
+    }
   },
   "readme": "README.md",
   "repository": "",

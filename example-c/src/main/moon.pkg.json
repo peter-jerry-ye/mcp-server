@@ -3,7 +3,15 @@
   "import": [
     "tonyfettes/uv",
     "peter-jerry-ye/async/stream",
-    "peter-jerry-ye/async/promise"
+    "peter-jerry-ye/async/promise",
+    {
+      "path": "peter-jerry-ye/mcp-server",
+      "alias": "mcp"
+    },
+    {
+      "path": "peter-jerry-ye/mcp-server/schema",
+      "alias": "schema"
+    }
   ],
   "link": {
     "native": {}

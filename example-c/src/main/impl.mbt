@@ -128,16 +128,59 @@ impl @stream.Flushable for File with flush(_self) {
 }
 
 ///|
+impl @stream.InputStream for File with readable(self) {
+  not(self.closed())
+}
+
+///|
+impl @stream.InputStream for File with read(self, len) {
+  @promise.spawn(fn(_defer) { read_file!!(self, len) })
+}
+
+///|
+async fn read_file(file : File, len : UInt64) -> Bytes! {
+  let buffer = Bytes::make(len.to_int(), b'\x00')
+  shift!!(fn(resolve, reject) {
+    try {
+      file.uv.fs_read!(
+        file.file,
+        [buffer[:]],
+        fn(_fs, nlen) { resolve([..buffer[:nlen]]) },
+        fn(_fs, error) { reject(error) },
+      )
+    } catch {
+      e => reject(e)
+    }
+  })
+}
+
+///|
 async fn write_file(file : File, bytes : Bytes) -> Unit! {
   shift!!(fn(resolve, reject) {
     try {
       file.uv.fs_write!(
         file.file,
         [bytes[:]],
-        -1,
         fn(_write, _len) { resolve(()) },
         fn(_file, err) { reject(err) },
       )
+    } catch {
+      e => reject(e)
+    }
+  })
+}
+
+///|
+async fn random(uv : @uv.Loop, len : UInt64) -> Bytes! {
+  let buffer = Bytes::make(len.to_int(), b'\x00')
+  shift!!(fn(resolve, reject) {
+    try {
+      uv.random!(buffer[:], 0, fn(_random, _buffer) { resolve(buffer) }, fn(
+        _random,
+        err
+      ) {
+        reject(err)
+      })
     } catch {
       e => reject(e)
     }
