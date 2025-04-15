@@ -1,6 +1,6 @@
 {
   "name": "peter-jerry-ye/mcp-server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "deps": {
     "peter-jerry-ye/async": "0.1.2",
     "moonbitlang/x": "0.4.25"
@@ -9,6 +9,7 @@
   "license": "Apache-2.0",
   "source": "src",
   "exclude": [
-    "example"
+    "example",
+    "example-c"
   ]
 }

@@ -1,8 +1,15 @@
 # MCP Server SDK
 
-A WIP MoonBit implementation to support [Model Context Protocol](https://modelcontextprotocol.io/) based on Wasm's Component Model.
+A WIP MoonBit implementation to support [Model Context Protocol](https://modelcontextprotocol.io/).
 
-The user can use this to develop a running MCP server, providing more functionality to their AI models, while feeling confident as the Wasm is sandboxed.
+Supported backends:
+
+- Wasm's Component Model
+- Native backend
+
+and more (as long as an implementation exists for `peter-jerry-ye/async/stream`).
+
+The user can use this to develop a running MCP server, providing more functionality to their AI models.
 
 ## Currently Supported Features
 
@@ -21,7 +28,7 @@ Call client capabilities (if provided):
 
 ## Example
 
-See `./example` for a simple weather MCP server.
+See `./example` for a simple weather MCP server in Wasm, and `./example-c` for a simple MCP server in native backend.
 
 ## TODO
 
