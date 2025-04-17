@@ -53,13 +53,13 @@ pub fn serve(
   @promise.spawn(async fn(_defer) {
     while self.running {
       try {
-        let message = stdin.read_line().await!!()
+        let message = stdin.read_line().await!()
           |> @json.parse!()
           |> @json.from_json!()
-        self.in_channel.push!!(message)
+        self.in_channel.push!(message)
       } catch {
         e => {
-          stderr.write("\{e}\n").await!!()
+          stderr.write("\{e}\n").await!()
           break
         }
       }
@@ -69,15 +69,15 @@ pub fn serve(
   // write to stdout for output channel
   @promise.spawn(async fn(_defer) {
     while true {
-      let message = self.out_channel.pop!!()
-      stdout.write("\{message.to_json() |> @json.stringify}\n").await!!()
+      let message = self.out_channel.pop!()
+      stdout.write("\{message.to_json() |> @json.stringify}\n").await!()
     }
   })
   |> ignore
   // handle messages
   @promise.spawn(async fn(defer) {
     defer(fn() { self.running = false })
-    let request = self.in_channel.pop!!()
+    let request = self.in_channel.pop!()
     guard request is Request(id~, method_="initialize", params~) else {
       fail!("Invalid initialization request \{request}")
     }
@@ -88,7 +88,7 @@ pub fn serve(
         "clientInfo": clientInfo,
         ..
       } else {
-      self.out_channel.push!!(
+      self.out_channel.push!(
         Response(
           id~,
           payload=Err({
@@ -111,8 +111,8 @@ pub fn serve(
         "serverInfo": { "name": "mcp-cli", "version": "0.1.0" },
       }),
     )
-    self.out_channel.push!!(response)
-    let notification = self.in_channel.pop!!()
+    self.out_channel.push!(response)
+    let notification = self.in_channel.pop!()
     guard notification
       is Notification(method_="notifications/initialized", params=_) else {
       fail!("Invalid initializaiton notification \{notification}")
@@ -120,14 +120,14 @@ pub fn serve(
     self.capabilities = capabilities
     self.clientInfo = clientInfo
     while true {
-      let message = self.in_channel.pop!!()
+      let message = self.in_channel.pop!()
       @promise.spawn(async fn(_defer) {
         try {
-          self.handle!!(message)
+          self.handle!(message)
         } catch {
-          error => self.log!!(String(error.to_string()), level=Error)
+          error => self.log!(String(error.to_string()), level=Error)
         } else {
-          Some(response) => self.out_channel.push!!(response)
+          Some(response) => self.out_channel.push!(response)
           None => ()
         }
       })
@@ -179,7 +179,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
             ),
           )
         }
-        let { isError, payload } = (tool.cb)!!(arguments, self)
+        let { isError, payload } = (tool.cb)!(arguments, self)
         return Some(
           Response(
             id~,
@@ -338,7 +338,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
       Some(Response(id~, payload=Ok({ "resourceTemplates": [] })))
     Response(id~, ..) as response => {
       if self.callbacks[id] is Some(channel) {
-        @promise.spawn(fn(_dfer) { channel.push!!(response) }) |> ignore
+        @promise.spawn(fn(_dfer) { channel.push!(response) }) |> ignore
       } else {
         fail!("Unexpected response for request \{id}: \{response}")
       }
@@ -361,7 +361,7 @@ pub async fn log(
     "level": String(level.to_string().to_lower()),
     "data": message,
   })
-  self.out_channel.push!!(notification)
+  self.out_channel.push!(notification)
 }
 
 ///|
@@ -375,7 +375,7 @@ pub fn add_tool(
   self.tools[name] = Tool::{ description, inputSchema, cb }
   if self.running {
     @promise.spawn(async fn(_defer) {
-      self.out_channel.push!!(
+      self.out_channel.push!(
         Notification(method_="notifications/tools/list_changed", params={}),
       )
     })
@@ -388,7 +388,7 @@ pub fn remove_tool(self : Server, name : String) -> Unit {
   self.tools.remove(name)
   if self.running {
     @promise.spawn(async fn(_defer) {
-      self.out_channel.push!!(
+      self.out_channel.push!(
         Notification(method_="notifications/tools/list_changed", params={}),
       )
     })
@@ -407,7 +407,7 @@ pub fn add_prompt(
   self.prompts[name] = Prompt::{ description, arguments, cb }
   if self.running {
     @promise.spawn(async fn(_defer) {
-      self.out_channel.push!!(
+      self.out_channel.push!(
         Notification(method_="notifications/prompts/list_changed", params={}),
       )
     })
@@ -420,7 +420,7 @@ pub fn remove_prompt(self : Server, name : String) -> Unit {
   self.prompts.remove(name)
   if self.running {
     @promise.spawn(async fn(_defer) {
-      self.out_channel.push!!(
+      self.out_channel.push!(
         Notification(method_="notifications/prompts/list_changed", params={}),
       )
     })
@@ -440,8 +440,8 @@ pub async fn list_roots(self : Server) -> Array[Root]! {
     let uuid = @uuid.from_bytes!(Bytes::from_fixedarray(random)).as_version(V4)
     let id = @rpc.String(uuid.to_string())
     self.callbacks[id] = channel
-    self.out_channel.push!!(Request(id~, method_="roots/list", params={}))
-    let response = channel.pop!!()
+    self.out_channel.push!(Request(id~, method_="roots/list", params={}))
+    let response = channel.pop!()
     self.callbacks.remove(id)
     guard response is Response(payload~, ..) else {
       fail!("Unexpected message for request roots/list: \{response}")

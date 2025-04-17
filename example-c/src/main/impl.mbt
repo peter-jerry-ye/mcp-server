@@ -34,13 +34,13 @@ impl @stream.InputStream for Stream with readable(self) {
 
 ///|
 impl @stream.InputStream for Stream with read(self, len) {
-  @promise.spawn(fn(_defer) { read_stream!!(self.stream, len) })
+  @promise.spawn(fn(_defer) { read_stream!(self.stream, len) })
 }
 
 ///|
 async fn read_stream(stream : @uv.Stream, len : UInt64) -> Bytes! {
   let buffer = Bytes::make(len.to_int(), b'\x00')
-  shift!!(fn(resolve, reject) {
+  shift!(fn(resolve, reject) {
     try {
       stream.read_start!(
         fn(_stream, _len) { buffer[:] },
@@ -69,7 +69,7 @@ impl @stream.OutputStream for Stream with writable(self) {
 
 ///|
 impl @stream.OutputStream for Stream with write(self, bytes) {
-  @promise.spawn(fn(_defer) { write_stream!!(self.stream, bytes) })
+  @promise.spawn(fn(_defer) { write_stream!(self.stream, bytes) })
 }
 
 ///|
@@ -79,7 +79,7 @@ impl @stream.Flushable for Stream with flush(_self) {
 
 ///|
 async fn write_stream(stream : @uv.Stream, bytes : Bytes) -> Unit! {
-  shift!!(fn(resolve, reject) {
+  shift!(fn(resolve, reject) {
     try {
       stream.write!([bytes[:]], fn(_write) { resolve(()) }, fn(_stream, err) {
         reject(err)
@@ -119,7 +119,7 @@ impl @stream.OutputStream for File with writable(self) {
 
 ///|
 impl @stream.OutputStream for File with write(self, bytes) {
-  @promise.spawn(fn(_defer) { write_file!!(self, bytes) })
+  @promise.spawn(fn(_defer) { write_file!(self, bytes) })
 }
 
 ///|
@@ -135,13 +135,13 @@ impl @stream.InputStream for File with readable(self) {
 
 ///|
 impl @stream.InputStream for File with read(self, len) {
-  @promise.spawn(fn(_defer) { read_file!!(self, len) })
+  @promise.spawn(fn(_defer) { read_file!(self, len) })
 }
 
 ///|
 async fn read_file(file : File, len : UInt64) -> Bytes! {
   let buffer = Bytes::make(len.to_int(), b'\x00')
-  shift!!(fn(resolve, reject) {
+  shift!(fn(resolve, reject) {
     try {
       file.uv.fs_read!(
         file.file,
@@ -157,7 +157,7 @@ async fn read_file(file : File, len : UInt64) -> Bytes! {
 
 ///|
 async fn write_file(file : File, bytes : Bytes) -> Unit! {
-  shift!!(fn(resolve, reject) {
+  shift!(fn(resolve, reject) {
     try {
       file.uv.fs_write!(
         file.file,
@@ -174,7 +174,7 @@ async fn write_file(file : File, bytes : Bytes) -> Unit! {
 ///|
 async fn random(uv : @uv.Loop, len : UInt64) -> Bytes! {
   let buffer = Bytes::make(len.to_int(), b'\x00')
-  shift!!(fn(resolve, reject) {
+  shift!(fn(resolve, reject) {
     try {
       uv.random!(buffer[:], 0, fn(_random, _buffer) { resolve(buffer) }, fn(
         _random,

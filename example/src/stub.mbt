@@ -30,22 +30,22 @@ pub fn run() -> Result[Unit, Unit] {
     cb=async fn(args, server) {
       try {
         guard args is { "location": String(city), .. }
-        let weather = @http.fetch!!(
+        let weather = @http.fetch!(
           @http.request!(
             "wttr.in",
             path="/" + city.replace_all(old=" ", new="%20") + "?format=4",
           ),
         )
-        server.log!!("Got weather response")
-        server.log!!("Roots: \{server.list_roots!!()}")
+        server.log!("Got weather response")
+        server.log!("Roots: \{server.list_roots!()}")
         @mcp.Response::{
           isError: weather.status() != 200,
           payload: [
             Text(
               text=if weather.status() == 200 {
-                @http.text(weather.consume().unwrap()).0.await!!()
+                @http.text(weather.consume().unwrap()).0.await!()
               } else {
-                "Failed to fetch weather data: \{@http.text(weather.consume().unwrap()).0.await!!()}"
+                "Failed to fetch weather data: \{@http.text(weather.consume().unwrap()).0.await!()}"
               },
             ),
           ],
