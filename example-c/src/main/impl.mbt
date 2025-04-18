@@ -44,9 +44,9 @@ async fn read_stream(stream : @uv.Stream, len : UInt64) -> Bytes! {
     try {
       stream.read_start!(
         fn(_stream, _len) { buffer[:] },
-        fn(_stream, _nread, _buf) {
+        fn(_stream, _nread, buf) {
           stream.read_stop?() |> ignore
-          resolve([..buffer[:]])
+          resolve([..buf])
         },
         fn(_stream, err) {
           stream.read_stop?() |> ignore
