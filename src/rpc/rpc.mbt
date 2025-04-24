@@ -16,8 +16,16 @@
 pub(all) enum Message {
   Request(id~ : Id, method_~ : String, params~ : Map[String, Json])
   Notification(method_~ : String, params~ : Map[String, Json])
-  Response(id~ : Id, payload~ : Result[Map[String, Json], RPCError])
+  Response(id~ : Id?, payload~ : Result[Map[String, Json], RPCError])
 } derive(Eq, Show)
+
+///|
+pub fn response(
+  id~ : Id,
+  payload~ : Result[Map[String, Json], RPCError]
+) -> Message {
+  Response(id=Some(id), payload~)
+}
 
 ///|
 pub impl @json.FromJson for Message with from_json(json, path) {
@@ -67,11 +75,11 @@ pub impl @json.FromJson for Message with from_json(json, path) {
       ..
     } => {
       let id = @json.from_json!(id, path=path.add_key("id"))
-      Response(id~, payload=Ok(result))
+      Response(id=Some(id), payload=Ok(result))
     }
     { "jsonrpc": "2.0", "id": String(_) | Number(_) as id, "error": error, .. } => {
       let id = @json.from_json!(id, path=path.add_key("id"))
-      Response(id~, payload=Err(@json.from_json!(error, path~)))
+      Response(id=Some(id), payload=Err(@json.from_json!(error, path~)))
     }
     _ => raise @json.JsonDecodeError((path, "Invalid JSON RPC Message"))
   }
@@ -93,10 +101,17 @@ pub impl ToJson for Message with to_json(self) {
         "method": Json::string(method_),
         "params": Json::object(params),
       }
-    Response(id~, payload=Ok(result)) =>
+    Response(id~, payload=Ok(result)) => {
+      guard id is Some(id)
       { "jsonrpc": "2.0", "id": id.to_json(), "result": Json::object(result) }
+    }
     Response(id~, payload=Err(error)) =>
-      { "jsonrpc": "2.0", "id": id.to_json(), "error": error.to_json() }
+      match id {
+        Some(id) =>
+          { "jsonrpc": "2.0", "id": id.to_json(), "error": error.to_json() }
+        None =>
+          { "jsonrpc": "2.0", "id": Json::null(), "error": error.to_json() }
+      }
   }
 }
 

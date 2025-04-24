@@ -58,6 +58,17 @@ pub fn serve(
           |> @json.from_json!()
         self.in_channel.push!(message)
       } catch {
+        @json.InvalidChar(_)
+        | @json.InvalidEof
+        | @json.InvalidNumber(_)
+        | @json.InvalidIdentEscape(_)
+        | @json.JsonDecodeError(_) =>
+          self.out_channel.push!(
+            Response(
+              id=None,
+              payload=Err({ code: -32700, message: "Parse error", data: None }),
+            ),
+          )
         e => {
           stderr.write("\{e}\n").await!()
           break
@@ -89,7 +100,7 @@ pub fn serve(
         ..
       } else {
       self.out_channel.push!(
-        Response(
+        @rpc.response(
           id~,
           payload=Err({
             code: -32602,
@@ -99,7 +110,7 @@ pub fn serve(
         ),
       )
     }
-    let response = @rpc.Response(
+    let response = @rpc.response(
       id~,
       payload=Ok({
         "protocolVersion": "2024-11-05",
@@ -141,10 +152,10 @@ pub fn serve(
 async fn handle(self : Server, message : Message) -> Message?! {
   // Check the used ids
   match message {
-    Request(method_="ping", id~, ..) => Some(Response(id~, payload=Ok({})))
+    Request(method_="ping", id~, ..) => Some(@rpc.response(id~, payload=Ok({})))
     Request(method_="tools/list", id~, ..) =>
       Some(
-        Response(
+        @rpc.response(
           id~,
           payload=Ok({
             "tools": Json::array(
@@ -169,7 +180,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
         self.tools.get(name) is Some(tool) {
         if not(tool.inputSchema.verify(arguments)) {
           return Some(
-            Response(
+            @rpc.response(
               id~,
               payload=Err(RPCError::{
                 code: -32602,
@@ -181,7 +192,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
         }
         let { isError, payload } = (tool.cb)!(arguments, self)
         return Some(
-          Response(
+          @rpc.response(
             id~,
             payload=Ok({
               "isError": Json::boolean(isError),
@@ -208,7 +219,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
         )
       } else {
         return Some(
-          Response(
+          @rpc.response(
             id~,
             payload=Err(RPCError::{
               code: -32602,
@@ -220,7 +231,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
       }
     Request(method_="prompts/list", id~, ..) =>
       Some(
-        Response(
+        @rpc.response(
           id~,
           payload=Ok({
             "prompts": Json::array(
@@ -238,7 +249,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
                             {
                               "name": Json::string(name),
                               "description": Json::string(description.or("")),
-                              "required": Json::boolean(required is Some(true))
+                              "required": Json::boolean(required is Some(true)),
                             }
                         }),
                       ),
@@ -256,7 +267,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
           if argument.required is Some(true) &&
             not(arguments.contains(argument.name)) {
             return Some(
-              Response(
+              @rpc.response(
                 id~,
                 payload=Err(RPCError::{
                   code: -32602,
@@ -269,7 +280,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
         }
         let response = (prompt.cb)(arguments)
         return Some(
-          Response(
+          @rpc.response(
             id~,
             payload=Ok({
               "messages": Json::array(
@@ -314,7 +325,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
         )
       } else {
         return Some(
-          Response(
+          @rpc.response(
             id~,
             payload=Err(RPCError::{
               code: -32602,
@@ -325,10 +336,10 @@ async fn handle(self : Server, message : Message) -> Message?! {
         )
       }
     Request(method_="resources/list", id~, ..) =>
-      Some(Response(id~, payload=Ok({ "resources": [] })))
+      Some(@rpc.response(id~, payload=Ok({ "resources": [] })))
     Request(method_="resources/templates/list", id~, ..) =>
-      Some(Response(id~, payload=Ok({ "resourceTemplates": [] })))
-    Response(id~, ..) as response => {
+      Some(@rpc.response(id~, payload=Ok({ "resourceTemplates": [] })))
+    Response(id=Some(id), ..) as response => {
       if self.callbacks[id] is Some(channel) {
         @promise.spawn(fn(_dfer) { channel.push!(response) }) |> ignore
       } else {
@@ -336,10 +347,8 @@ async fn handle(self : Server, message : Message) -> Message?! {
       }
       None
     }
-    other => {
-      fail!("Unhandled \{other}")
-      None
-    }
+    Response(id=None, ..) => fail!("Unexpected response for request \{message}")
+    other => fail!("Unhandled \{other}")
   }
 }
 
