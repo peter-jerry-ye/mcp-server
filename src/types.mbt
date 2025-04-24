@@ -35,7 +35,16 @@ pub(all) enum LogLevel {
   Critical
   Alert
   Emergency
-} derive(Eq, Show)
+} derive(Eq, Show, Compare)
+
+test "loglevel" {
+  assert_true!(Debug < Info)
+  assert_true!(Info < Warning)
+  assert_true!(Warning < Error)
+  assert_true!(Error < Critical)
+  assert_true!(Critical < Alert)
+  assert_true!(Alert < Emergency)
+}
 
 ///|
 priv struct Tool {

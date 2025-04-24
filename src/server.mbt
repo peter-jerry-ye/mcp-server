@@ -23,6 +23,7 @@ struct Server {
   mut clientInfo : Json
   callbacks : Map[Id, @channel.T[Message]]
   random : @random.Rand
+  mut level : LogLevel
 }
 
 ///|
@@ -37,6 +38,7 @@ pub fn new(seed : Bytes) -> Server {
     clientInfo: {},
     callbacks: {},
     random: @random.new(seed~),
+    level: Debug,
   }
 }
 
@@ -153,6 +155,38 @@ async fn handle(self : Server, message : Message) -> Message?! {
   // Check the used ids
   match message {
     Request(method_="ping", id~, ..) => Some(@rpc.response(id~, payload=Ok({})))
+    Request(method_="logging/setLevel", id~, params~) => {
+      guard params is { "level": String(level), .. } else {
+        Some(
+          @rpc.response(
+            id~,
+            payload=Err({ code: -32602, message: "Invalid params", data: None }),
+          ),
+        )
+      }
+      match level.to_lower() {
+        "debug" => self.level = Debug
+        "info" => self.level = Info
+        "notice" => self.level = Notice
+        "warning" => self.level = Warning
+        "error" => self.level = Error
+        "critical" => self.level = Critical
+        "alert" => self.level = Alert
+        "emergency" => self.level = Emergency
+        _ =>
+          return Some(
+            @rpc.response(
+              id~,
+              payload=Err({
+                code: -32602,
+                message: "Invalid logging level",
+                data: None,
+              }),
+            ),
+          )
+      }
+      Some(@rpc.response(id~, payload=Ok({})))
+    }
     Request(method_="tools/list", id~, ..) =>
       Some(
         @rpc.response(
@@ -358,11 +392,13 @@ pub async fn log(
   message : Json,
   level~ : LogLevel = Info
 ) -> Unit {
-  let notification = @rpc.Notification(method_="notifications/message", params={
-    "level": Json::string(level.to_string().to_lower()),
-    "data": message,
-  })
-  self.out_channel.push!(notification)
+  if level >= self.level {
+    let notification = @rpc.Notification(method_="notifications/message", params={
+      "level": Json::string(level.to_string().to_lower()),
+      "data": message,
+    })
+    self.out_channel.push!(notification)
+  }
 }
 
 ///|
@@ -371,7 +407,7 @@ pub fn add_tool(
   name~ : String,
   description~ : String,
   inputSchema~ : Schema,
-  cb~ : async (Json, Server) -> Response
+  cb~ : (Json, Server) -> Response!Async
 ) -> Unit {
   self.tools[name] = Tool::{ description, inputSchema, cb }
   if self.running {

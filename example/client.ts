@@ -54,8 +54,8 @@ client.setNotificationHandler(z.object({
     }
 }) => {
     switch (level) {
-        case "info": console.info(logger, data); break;
         case "debug": console.trace(logger, data); break;
+        case "info": console.info(logger, data); break;
         case "warning":
         case "alert":
         case "emergency":
@@ -65,6 +65,8 @@ client.setNotificationHandler(z.object({
 })
 
 await client.connect(transport);
+
+client.setLoggingLevel("info")
 
 const { tools } = await client.listTools();
 

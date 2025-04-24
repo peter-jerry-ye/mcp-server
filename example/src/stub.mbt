@@ -36,6 +36,7 @@ pub fn run() -> Result[Unit, Unit] {
             path="/" + city.replace_all(old=" ", new="%20") + "?format=4",
           ),
         )
+        server.log!("You can't see this", level=Debug)
         server.log!("Got weather response")
         server.log!("Roots: \{server.list_roots!()}")
         @mcp.Response::{
