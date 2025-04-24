@@ -83,14 +83,18 @@ pub impl ToJson for Message with to_json(self) {
     Request(id~, method_~, params~) =>
       {
         "jsonrpc": "2.0",
-        "method": String(method_),
+        "method": Json::string(method_),
         "id": id.to_json(),
-        "params": Object(params),
+        "params": Json::object(params),
       }
     Notification(method_~, params~) =>
-      { "jsonrpc": "2.0", "method": String(method_), "params": Object(params) }
+      {
+        "jsonrpc": "2.0",
+        "method": Json::string(method_),
+        "params": Json::object(params),
+      }
     Response(id~, payload=Ok(result)) =>
-      { "jsonrpc": "2.0", "id": id.to_json(), "result": Object(result) }
+      { "jsonrpc": "2.0", "id": id.to_json(), "result": Json::object(result) }
     Response(id~, payload=Err(error)) =>
       { "jsonrpc": "2.0", "id": id.to_json(), "error": error.to_json() }
   }
@@ -157,7 +161,7 @@ pub impl @json.FromJson for Id with from_json(json, path) {
 ///|
 pub impl ToJson for Id with to_json(self) {
   match self {
-    String(s) => String(s)
-    Number(n) => Number(n)
+    String(s) => Json::string(s)
+    Number(n) => Json::number(n)
   }
 }

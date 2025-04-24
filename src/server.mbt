@@ -125,7 +125,7 @@ pub fn serve(
         try {
           self.handle!(message)
         } catch {
-          error => self.log!(String(error.to_string()), level=Error)
+          error => self.log!(Json::string(error.to_string()), level=Error)
         } else {
           Some(response) => self.out_channel.push!(response)
           None => ()
@@ -147,15 +147,15 @@ async fn handle(self : Server, message : Message) -> Message?! {
         Response(
           id~,
           payload=Ok({
-            "tools": Array(
+            "tools": Json::array(
               self.tools
               .iter()
               .map(fn {
                 (name, { description, inputSchema, .. }) =>
                   (
                     {
-                      "name": String(name),
-                      "description": String(description),
+                      "name": Json::string(name),
+                      "description": Json::string(description),
                       "inputSchema": inputSchema.to_json(),
                     } : Json)
               })
@@ -184,26 +184,22 @@ async fn handle(self : Server, message : Message) -> Message?! {
           Response(
             id~,
             payload=Ok({
-              "isError": if isError {
-                True
-              } else {
-                False
-              },
-              "content": Array(
+              "isError": Json::boolean(isError),
+              "content": Json::array(
                 payload.map(fn {
-                  Text(text~) => { "type": "text", "text": String(text) }
+                  Text(text~) => { "type": "text", "text": Json::string(text) }
                   Image(data~, mimeType~) =>
                     {
                       "type": "image",
-                      "data": String(data),
-                      "mimeType": String(mimeType),
+                      "data": Json::string(data),
+                      "mimeType": Json::string(mimeType),
                     }
                   Resource(uri~, mimeType~, text~) =>
                     {
                       "type": "resource",
-                      "uri": String(uri),
-                      "mimeType": String(mimeType),
-                      "text": String(text),
+                      "uri": Json::string(uri),
+                      "mimeType": Json::string(mimeType),
+                      "text": Json::string(text),
                     }
                 }),
               ),
@@ -227,26 +223,22 @@ async fn handle(self : Server, message : Message) -> Message?! {
         Response(
           id~,
           payload=Ok({
-            "prompts": Array(
+            "prompts": Json::array(
               self.prompts
               .iter()
               .map(fn {
                 (name, { description, arguments, .. }) =>
                   (
                     {
-                      "name": String(name),
-                      "description": String(description),
-                      "arguments": Array(
+                      "name": Json::string(name),
+                      "description": Json::string(description),
+                      "arguments": Json::array(
                         arguments.map(fn {
                           { name, description, required } =>
                             {
-                              "name": String(name),
-                              "description": String(description.or("")),
-                              "required": if required is Some(true) {
-                                True
-                              } else {
-                                False
-                              },
+                              "name": Json::string(name),
+                              "description": Json::string(description.or("")),
+                              "required": Json::boolean(required is Some(true))
                             }
                         }),
                       ),
@@ -280,7 +272,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
           Response(
             id~,
             payload=Ok({
-              "messages": Array(
+              "messages": Json::array(
                 response.map(fn {
                   { role, message: Text(text~) } =>
                     {
@@ -288,7 +280,7 @@ async fn handle(self : Server, message : Message) -> Message?! {
                         User => "user"
                         Assistant => "assistant"
                       },
-                      "content": { "type": "text", "text": String(text) },
+                      "content": { "type": "text", "text": Json::string(text) },
                     }
                   { role, message: Image(data~, mimeType~) } =>
                     {
@@ -298,8 +290,8 @@ async fn handle(self : Server, message : Message) -> Message?! {
                       },
                       "content": {
                         "type": "image",
-                        "data": String(data),
-                        "mimeType": String(mimeType),
+                        "data": Json::string(data),
+                        "mimeType": Json::string(mimeType),
                       },
                     }
                   { role, message: Resource(uri~, mimeType~, text~) } =>
@@ -310,9 +302,9 @@ async fn handle(self : Server, message : Message) -> Message?! {
                       },
                       "content": {
                         "type": "resource",
-                        "uri": String(uri),
-                        "mimeType": String(mimeType),
-                        "text": String(text),
+                        "uri": Json::string(uri),
+                        "mimeType": Json::string(mimeType),
+                        "text": Json::string(text),
                       },
                     }
                 }),
@@ -358,7 +350,7 @@ pub async fn log(
   level~ : LogLevel = Info
 ) -> Unit {
   let notification = @rpc.Notification(method_="notifications/message", params={
-    "level": String(level.to_string().to_lower()),
+    "level": Json::string(level.to_string().to_lower()),
     "data": message,
   })
   self.out_channel.push!(notification)

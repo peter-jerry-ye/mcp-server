@@ -59,13 +59,13 @@ pub fn T::to_json(self : T) -> Json {
   match self {
     T::Integer => { "type": "integer" }
     T::String => { "type": "string" }
-    T::Enum(values) => { "enum": Array(values) }
+    T::Enum(values) => { "enum": Json::array(values) }
     T::Array(schema) => {
       let result : Map[String, Json] = {
         "type": "array",
         "items": schema.to_json(),
       }
-      Object(result)
+      Json::object(result)
     }
     T::Object(map, required~, additionalProperties~) => {
       let json_object = Map::new()
@@ -74,15 +74,15 @@ pub fn T::to_json(self : T) -> Json {
       }
       let result : Map[String, Json] = {
         "type": "object",
-        "properties": Object(json_object),
+        "properties": Json::object(json_object),
       }
       if required is Some(required) {
-        result["required"] = Array(required.map(Json::String))
+        result["required"] = Json::array(required.map(Json::string))
       }
       if not(additionalProperties) {
         result["additionalProperties"] = false
       }
-      Object(result)
+      Json::object(result)
     }
   }
 }
