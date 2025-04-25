@@ -14,8 +14,7 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ListRootsResult } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+import { ListRootsRequestSchema, ListRootsResult, LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 
 const transport = new StdioClientTransport({
     command: "wasmtime",
@@ -29,26 +28,18 @@ const client = new Client({ name: "example-client", version: "0.1.0" }, {
     }
 });
 
-client.setRequestHandler(z.object({
-    method: z.literal("roots/list")
-}), () => {
-    return ({
+client.setRequestHandler(ListRootsRequestSchema, (): ListRootsResult => {
+    return {
         "roots": [{
             "uri": "file:///home/user/projects/myproject"
         }, {
             "uri": "file:///home/user/projects/anotherproject"
         }]
-    } as ListRootsResult);
+    };
 })
 
 
-client.setNotificationHandler(z.object({
-    method: z.literal("notifications/message"), params: z.object({
-        level: z.string(),
-        logger: z.optional(z.string()),
-        data: z.any()
-    })
-}), ({
+client.setNotificationHandler(LoggingMessageNotificationSchema, ({
     params: {
         level, logger, data
     }
