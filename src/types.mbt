@@ -37,6 +37,7 @@ pub(all) enum LogLevel {
   Emergency
 } derive(Eq, Show, Compare)
 
+///|
 test "loglevel" {
   assert_true!(Debug < Info)
   assert_true!(Info < Warning)
@@ -50,7 +51,7 @@ test "loglevel" {
 priv struct Tool {
   description : String
   inputSchema : Schema
-  cb : async (Json, Server) -> Response
+  cb : (Json, Server) -> Response!Async
 }
 
 ///|
