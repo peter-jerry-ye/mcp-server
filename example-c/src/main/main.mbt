@@ -117,7 +117,7 @@ fn spawn(
   let exit_status = @promise.make()
   let options = @uv.ProcessOptions::new(
     command,
-    [command, ..args],
+    [command, ..args.map(String::view(_))],
     fn(process, status, _term_signal) {
       exit_status.resolve(status)
       out.close(ignore)
