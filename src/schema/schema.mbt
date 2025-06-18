@@ -98,12 +98,11 @@ pub fn T::verify(self : T, json : Json) -> Bool {
     (T::Integer, Number(n)) => n == n && n.to_int().to_double() == n
     (T::String, String(_)) => true
     (T::Enum(values), _) => values.contains(json)
-    (T::Array(schema), Array(values)) =>
-      values.iter().all(fn { value => schema.verify(value) })
+    (T::Array(schema), Array(values)) => values.iter().all(schema.verify(_))
     (T::Object(map, required~, additionalProperties~), Object(json)) => {
       let required = @sorted_set.from_array(required.or([]))
       for key, value in map {
-        if json[key] is Some(json) {
+        if json.get(key) is Some(json) {
           if not(value.verify(json)) {
             return false
           }
@@ -124,7 +123,7 @@ pub fn T::verify(self : T, json : Json) -> Bool {
 
 ///|
 test "to_json" {
-  @json.inspect!(
+  @json.inspect(
     object({
       "name": object({
         "firstName": string(),
@@ -146,7 +145,7 @@ test "to_json" {
       },
     },
   )
-  @json.inspect!(
+  @json.inspect(
     object({
       "name": object(
         { "firstName": string(), "lastName": string(), "middleName": string() },
@@ -181,12 +180,12 @@ test "verify" {
       "middleName": string(),
     }),
   })
-  assert_true!(
+  assert_true(
     schema.verify({
       "name": { "firstName": "John", "lastName": "Doe", "middleName": "Smith" },
     }),
   )
-  assert_false!(
+  assert_false(
     schema.verify({ "name": { "firstName": "John", "lastName": 1 } }),
   )
   let schema = object({
@@ -196,11 +195,11 @@ test "verify" {
     ),
     "age": integer(),
   })
-  assert_true!(
+  assert_true(
     schema.verify({
       "name": { "firstName": "John", "lastName": "Doe" },
       "age": 30,
     }),
   )
-  assert_false!(schema.verify({ "name": { "firstName": "John" }, "age": 30 }))
+  assert_false(schema.verify({ "name": { "firstName": "John" }, "age": 30 }))
 }

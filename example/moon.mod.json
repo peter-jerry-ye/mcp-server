@@ -4,7 +4,8 @@
     "peter-jerry-ye/io": "0.3.2",
     "peter-jerry-ye/mcp-server": {
       "path": ".."
-    }
+    },
+    "peter-jerry-ye/async": "0.1.7"
   },
   "source": "src"
 }

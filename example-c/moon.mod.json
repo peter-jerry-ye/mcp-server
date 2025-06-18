@@ -2,7 +2,7 @@
   "name": "username/hello",
   "version": "0.1.0",
   "deps": {
-    "tonyfettes/uv": "0.2.0",
+    "tonyfettes/uv": "0.9.0",
     "peter-jerry-ye/async": "0.1.6",
     "peter-jerry-ye/mcp-server": {
       "path": ".."

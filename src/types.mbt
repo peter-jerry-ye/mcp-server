@@ -13,16 +13,16 @@
 // limitations under the License.
 
 ///|
-typealias Schema = @schema.T
+typealias @schema.T as Schema
 
 ///|
-typealias Message = @rpc.Message
+typealias @rpc.Message
 
 ///|
-typealias Id = @rpc.Id
+typealias @rpc.Id
 
 ///|
-typealias RPCError = @rpc.RPCError
+typealias @rpc.RPCError
 
 ///|
 /// RFC 5424
@@ -39,19 +39,19 @@ pub(all) enum LogLevel {
 
 ///|
 test "loglevel" {
-  assert_true!(Debug < Info)
-  assert_true!(Info < Warning)
-  assert_true!(Warning < Error)
-  assert_true!(Error < Critical)
-  assert_true!(Critical < Alert)
-  assert_true!(Alert < Emergency)
+  assert_true(Debug < Info)
+  assert_true(Info < Warning)
+  assert_true(Warning < Error)
+  assert_true(Error < Critical)
+  assert_true(Critical < Alert)
+  assert_true(Alert < Emergency)
 }
 
 ///|
 priv struct Tool {
   description : String
   inputSchema : Schema
-  cb : (Json, Server) -> Response!Async
+  cb : async (Json, Server) -> Response raise
 }
 
 ///|

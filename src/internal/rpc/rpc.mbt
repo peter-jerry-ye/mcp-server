@@ -39,14 +39,14 @@ pub impl @json.FromJson for Message with from_json(json, path) {
       | Number(_) as id,
       ..
     } => {
-      let id : Id = @json.from_json!(id, path=path.add_key("id"))
+      let id : Id = @json.from_json(id, path=path.add_key("id"))
       Request(
         id~,
         method_~,
         params=params
-          .map(fn {
-            Object(params) => params
-            _ => panic()
+          .map(param => {
+            guard param is Object(params)
+            params
           })
           .or({}),
       )
@@ -61,9 +61,9 @@ pub impl @json.FromJson for Message with from_json(json, path) {
       Notification(
         method_~,
         params=params
-          .map(fn {
-            Object(params) => params
-            _ => panic()
+          .map(param => {
+            guard param is Object(params)
+            params
           })
           .or({}),
       )
@@ -74,12 +74,12 @@ pub impl @json.FromJson for Message with from_json(json, path) {
       "result": Object(result),
       ..
     } => {
-      let id = @json.from_json!(id, path=path.add_key("id"))
+      let id = @json.from_json(id, path=path.add_key("id"))
       Response(id=Some(id), payload=Ok(result))
     }
     { "jsonrpc": "2.0", "id": String(_) | Number(_) as id, "error": error, .. } => {
-      let id = @json.from_json!(id, path=path.add_key("id"))
-      Response(id=Some(id), payload=Err(@json.from_json!(error, path~)))
+      let id = @json.from_json(id, path=path.add_key("id"))
+      Response(id=Some(id), payload=Err(@json.from_json(error, path~)))
     }
     _ => raise @json.JsonDecodeError((path, "Invalid JSON RPC Message"))
   }
@@ -118,14 +118,14 @@ pub impl ToJson for Message with to_json(self) {
 ///|
 test {
   let message = Message::Request(id=Number(1), method_="test", params={ "a": 1 })
-  @json.inspect!(message, content={
+  @json.inspect(message, content={
     "jsonrpc": "2.0",
     "method": "test",
     "id": Number(1),
     "params": { "a": 1 },
   })
-  assert_eq!(
-    @json.from_json?({
+  assert_eq(
+    try? @json.from_json({
       "jsonrpc": "2.0",
       "method": "test",
       "id": 1,
@@ -145,17 +145,17 @@ pub(all) struct RPCError {
 ///|
 test {
   let rpc_error : RPCError = { code: 1000, message: "Error", data: None }
-  @json.inspect!(rpc_error, content={ "code": 1000, "message": "Error" })
-  let parsed : RPCError = rpc_error.to_json() |> @json.from_json!()
-  assert_eq!(parsed, rpc_error)
+  @json.inspect(rpc_error, content={ "code": 1000, "message": "Error" })
+  let parsed : RPCError = rpc_error.to_json() |> @json.from_json()
+  assert_eq(parsed, rpc_error)
   let rpc_error : RPCError = { code: 1000, message: "Error", data: Some(1) }
-  @json.inspect!(rpc_error, content={
+  @json.inspect(rpc_error, content={
     "code": 1000,
     "message": "Error",
     "data": 1,
   })
-  let parsed = rpc_error.to_json() |> @json.from_json!()
-  assert_eq!(parsed, rpc_error)
+  let parsed = rpc_error.to_json() |> @json.from_json()
+  assert_eq(parsed, rpc_error)
 }
 
 ///|

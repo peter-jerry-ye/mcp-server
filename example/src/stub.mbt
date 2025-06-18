@@ -30,21 +30,21 @@ pub fn run() -> Result[Unit, Unit] {
     cb=async fn(args, server) {
       try {
         guard args is { "location": String(city), .. }
-        let weather = @http.fetch!(
-          @http.request!(
+        let weather = @http.fetch(
+          @http.request(
             "wttr.in",
             path="/" + city.replace_all(old=" ", new="%20") + "?format=4",
           ),
         )
-        server.log!("You can't see this", level=Debug)
-        server.log!("Got weather response")
-        server.log!("Roots: \{server.list_roots!()}")
+        server.log("You can't see this", level=Debug)
+        server.log("Got weather response")
+        server.log("Roots: \{server.list_roots!()}")
         @mcp.Response::{
           isError: weather.status() != 200,
           payload: [
             Text(
               text=if weather.status() == 200 {
-                @http.text(weather.consume().unwrap()).0.await!()
+                @http.text(weather.consume().unwrap()).0.await()
               } else {
                 "Failed to fetch weather data: \{@http.text(weather.consume().unwrap()).0.await!()}"
               },
@@ -64,11 +64,10 @@ pub fn run() -> Result[Unit, Unit] {
     name="get weather",
     description="instruct the AI to get weather for a city",
     arguments=[@mcp.prompt_argument("city")],
-    cb=fn {
-      { "city"? : city, .. } => {
-        let city = city.or("Beijing")
-        [{ role: User, message: Text(text="Get weather for \{city}") }]
-      }
+    cb=param => {
+      guard param is { "city"? : city, .. }
+      let city = city.or("Beijing")
+      [{ role: User, message: Text(text="Get weather for \{city}") }]
     },
   )
   server.serve(
